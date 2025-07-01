@@ -88,7 +88,7 @@ public sealed class CodeGenerator
                 Name = NameHelper.ToPascalCase(NameHelper.Singularize(fk.ReferencedTable))
             }).DistinctBy(n => n.Type).ToList();
 
-            var propList = table.Columns.Where(c => !c.IsVersion).Select(c => new
+            var propList = table.Columns.Select(c => new
             {
                 Name = NameHelper.ToPascalCase(c.Name),
                 Type = MapColumnType(c)
@@ -126,12 +126,17 @@ public sealed class CodeGenerator
             if (File.Exists(syncTemplatePath))
             {
                 var syncTemplate = await File.ReadAllTextAsync(syncTemplatePath, ct);
+                var pkProps = table.PrimaryKey.Select(pk => NameHelper.ToPascalCase(pk)).ToHashSet();
+                var propsWithoutKey = table.Columns.Where(c => !c.IsVersion && !pkProps.Contains(NameHelper.ToPascalCase(c.Name))).Select(c => new { Name = NameHelper.ToPascalCase(c.Name) }).ToList();
+
                 var syncModel = new
                 {
                     domainNamespace = domainNamespace,
                     namespace = "WebApi.Endpoints",
                     entityName = entityName,
-                    entityLower = NameHelper.Singularize(table.Name).ToLowerInvariant()
+                    entityLower = NameHelper.Singularize(table.Name).ToLowerInvariant(),
+                    propsWithoutKey = propsWithoutKey,
+                    pkProp = pkProps.FirstOrDefault() ?? "Id"
                 };
                 var syncRendered = _renderer.Render(syncTemplate, syncModel);
                 var syncPath = Path.Combine(outputDir, "WebApi", "Endpoints", $"{entityName}SyncEndpoint.cs");
@@ -180,6 +185,16 @@ public sealed class CodeGenerator
             var attrRendered = _renderer.Render(attrTemplate, new { namespace = "Domain.Common" });
             var attrPath = Path.Combine(outputDir, "Domain", "Common", "CacheableAttribute.cs");
             RegionFileWriter.WriteFile(attrPath, attrRendered);
+        }
+
+        // Generate SyncPayload shared
+        var syncPayloadTemplatePath = Path.Combine(templatesRoot, "shared", "sync_payload.scriban");
+        if (File.Exists(syncPayloadTemplatePath))
+        {
+            var spTemplate = await File.ReadAllTextAsync(syncPayloadTemplatePath, ct);
+            var spRendered = _renderer.Render(spTemplate, new { namespace = "Application.Common" });
+            var spPath = Path.Combine(outputDir, "Application", "Common", "SyncPayload.cs");
+            RegionFileWriter.WriteFile(spPath, spRendered);
         }
 
         // Generate Infrastructure DI extension

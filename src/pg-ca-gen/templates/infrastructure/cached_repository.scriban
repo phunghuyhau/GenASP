@@ -34,19 +34,19 @@ namespace {{namespace}}
         public async Task AddAsync(TEntity entity, CancellationToken ct = default)
         {
             await _inner.AddAsync(entity, ct);
-            _cache.Remove(CacheKey(_inner.GetId(entity)));
+            _cache.Compact(1.0);
         }
 
         public async Task UpdateAsync(TEntity entity, CancellationToken ct = default)
         {
             await _inner.UpdateAsync(entity, ct);
-            _cache.Remove(CacheKey(_inner.GetId(entity)));
+            _cache.Compact(1.0);
         }
 
         public async Task DeleteAsync(TEntity entity, CancellationToken ct = default)
         {
             await _inner.DeleteAsync(entity, ct);
-            _cache.Remove(CacheKey(_inner.GetId(entity)));
+            _cache.Compact(1.0);
         }
 
         public IQueryable<TEntity> Query() => _inner.Query();

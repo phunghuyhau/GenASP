@@ -1,0 +1,9 @@
+namespace {{namespace}}
+{
+    public sealed class SyncPayload<TDto>
+    {
+        public List<TDto> Created { get; set; } = new();
+        public List<TDto> Updated { get; set; } = new();
+        public List<TDto> Deleted { get; set; } = new();
+    }
+}

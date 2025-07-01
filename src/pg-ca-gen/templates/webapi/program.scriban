@@ -1,7 +1,7 @@
 using Serilog;
 using Serilog.Events;
 using WebApi.Middlewares;
-using Infrastructure.Persistence;
+using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 

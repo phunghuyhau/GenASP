@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -20,5 +22,30 @@ namespace {{namespace}}
             return (IQueryable<T>)genericMethod.Invoke(null, new object[] { source, lambda })!;
         }
 #endregion
+
+        public static IQueryable<T> Paginate<T>(this IQueryable<T> source, int page, int pageSize)
+            => source.Skip((page - 1) * pageSize).Take(pageSize);
+
+        public static IQueryable<T> WhereContains<T>(this IQueryable<T> source, string propertyName, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return source;
+            var param = Expression.Parameter(typeof(T), "x");
+            var body = Expression.PropertyOrField(param, propertyName);
+            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string), typeof(StringComparison) });
+            var constant = Expression.Constant(value, typeof(string));
+            var comparison = Expression.Constant(StringComparison.OrdinalIgnoreCase);
+            var call = Expression.Call(body, containsMethod!, constant, comparison);
+            var lambda = Expression.Lambda<Func<T, bool>>(call, param);
+            return source.Where(lambda);
+        }
+
+        public static IQueryable<T> WhereIn<T, TProperty>(this IQueryable<T> source, Expression<Func<T, TProperty>> selector, IEnumerable<TProperty> values)
+        {
+            if (values == null || !values.Any()) return source;
+            var param = selector.Parameters[0];
+            var body = Expression.Call(typeof(Enumerable), nameof(Enumerable.Contains), new[] { typeof(TProperty) }, Expression.Constant(values), selector.Body);
+            var lambda = Expression.Lambda<Func<T, bool>>(body, param);
+            return source.Where(lambda);
+        }
     }
 }

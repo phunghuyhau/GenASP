@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using {{domainNamespace}};
 using Application.DTOs;
+using Application.Common;
+using Infrastructure.Persistence;
 
 namespace {{namespace}}
 {
@@ -9,11 +12,45 @@ namespace {{namespace}}
         public static RouteGroupBuilder Map{{entityName}}Sync(this RouteGroupBuilder group)
         {
 #region generated
-            group.MapPost("/{{entityLower}}/sync", async (object repo, [FromBody] object payload) =>
+            group.MapPost("/{{entityLower}}/sync", async ([FromServices] AppDbContext db, [FromBody] SyncPayload<{{entityName}}Dto> payload, CancellationToken ct) =>
             {
-                // TODO: Implement bulk sync logic
-                return Results.Ok();
-            });
+                if (payload == null) return Results.BadRequest();
+
+                // CREATE
+                var newEntities = payload.Created.Select(dto => new {{entityName}}
+                {
+{{ for prop in propsWithoutKey }}                    {{prop.Name}} = dto.{{prop.Name}},
+{{ end }}                }).ToList();
+                await db.Set<{{entityName}}>().AddRangeAsync(newEntities, ct);
+
+                // UPDATE
+                foreach (var dto in payload.Updated)
+                {
+                    var entity = await db.Set<{{entityName}}>().FindAsync(new object?[] { dto.{{pkProp}} }, ct);
+                    if (entity == null) return Results.NotFound();
+                    db.Entry(entity).OriginalValues[nameof(BaseEntity.Version)] = dto.Version;
+{{ for prop in propsWithoutKey }}                    entity.{{prop.Name}} = dto.{{prop.Name}};
+{{ end }}                }
+
+                // DELETE
+                foreach (var dto in payload.Deleted)
+                {
+                    var entity = await db.Set<{{entityName}}>().FindAsync(new object?[] { dto.{{pkProp}} }, ct);
+                    if (entity == null) continue;
+                    db.Entry(entity).OriginalValues[nameof(BaseEntity.Version)] = dto.Version;
+                    db.Set<{{entityName}}>().Remove(entity);
+                }
+
+                try
+                {
+                    var affected = await db.SaveChangesAsync(ct);
+                    return Results.Ok(new { affected });
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return Results.Conflict("Concurrency conflict detected");
+                }
+            }).WithName("Sync{{entityName}}").RequireAuthorization();
 #endregion
             return group;
         }
