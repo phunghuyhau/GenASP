@@ -5,6 +5,7 @@ namespace {{namespace}}
     {
 #region generated
 {{ for prop in properties }}        public {{prop.Type}} {{prop.Name}} { get; set; }
+{{ end }}{{ for nav in navs }}        public {{nav.Type}}? {{nav.Name}} { get; set; }
 {{ end }}#endregion
 
 #region custom-code

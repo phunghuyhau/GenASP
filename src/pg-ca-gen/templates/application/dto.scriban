@@ -1,0 +1,9 @@
+namespace {{namespace}}
+{
+    public partial class {{name}}Dto
+    {
+#region generated
+{{ for prop in properties }}        public {{prop.Type}} {{prop.Name}} { get; set; }
+{{ end }}#endregion
+    }
+}

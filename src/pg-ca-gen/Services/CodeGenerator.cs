@@ -3,6 +3,7 @@ using PgCaGen.Models;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using System.Text;
 
 namespace PgCaGen.Services;
 
@@ -48,6 +49,12 @@ public sealed class CodeGenerator
             var entityName = NameHelper.ToPascalCase(NameHelper.Singularize(table.Name));
             var entityCsPath = Path.Combine(outputDir, "Domain", "Entities", $"{entityName}.cs");
 
+            var navs = table.ForeignKeys.Select(fk => new
+            {
+                Type = NameHelper.ToPascalCase(NameHelper.Singularize(fk.ReferencedTable)),
+                Name = NameHelper.ToPascalCase(NameHelper.Singularize(fk.ReferencedTable))
+            }).DistinctBy(n => n.Type).ToList();
+
             var model = new
             {
                 namespace = domainNamespace,
@@ -56,11 +63,80 @@ public sealed class CodeGenerator
                 {
                     Name = NameHelper.ToPascalCase(c.Name),
                     Type = MapColumnType(c)
-                }).ToList()
+                }).ToList(),
+                navs = navs
             };
 
             var rendered = _renderer.Render(entityTemplate, model);
             RegionFileWriter.WriteFile(entityCsPath, rendered);
+        }
+
+        // Generate DTOs
+        var dtoNamespace = "Application.DTOs";
+        var dtoTemplatePath = Path.Combine(templatesRoot, "application", "dto.scriban");
+        var dtoTemplate = await File.ReadAllTextAsync(dtoTemplatePath, ct);
+        var fullDtoTemplatePath = Path.Combine(templatesRoot, "application", "fullinfo_dto.scriban");
+        var fullDtoTemplate = await File.ReadAllTextAsync(fullDtoTemplatePath, ct);
+
+        foreach (var table in dbModel.Tables)
+        {
+            var entityName = NameHelper.ToPascalCase(NameHelper.Singularize(table.Name));
+
+            var navs = table.ForeignKeys.Select(fk => new
+            {
+                Type = NameHelper.ToPascalCase(NameHelper.Singularize(fk.ReferencedTable)),
+                Name = NameHelper.ToPascalCase(NameHelper.Singularize(fk.ReferencedTable))
+            }).DistinctBy(n => n.Type).ToList();
+
+            var propList = table.Columns.Where(c => !c.IsVersion).Select(c => new
+            {
+                Name = NameHelper.ToPascalCase(c.Name),
+                Type = MapColumnType(c)
+            }).ToList();
+
+            var dtoModel = new
+            {
+                namespace = dtoNamespace,
+                name = entityName,
+                properties = propList
+            };
+            var renderedDto = _renderer.Render(dtoTemplate, dtoModel);
+            var dtoPath = Path.Combine(outputDir, "Application", "DTOs", $"{entityName}Dto.cs");
+            RegionFileWriter.WriteFile(dtoPath, renderedDto);
+
+            var fullModel = new
+            {
+                namespace = dtoNamespace,
+                name = entityName,
+                properties = propList,
+                navs = navs
+            };
+            var renderedFull = _renderer.Render(fullDtoTemplate, fullModel);
+            var fullPath = Path.Combine(outputDir, "Application", "DTOs", $"{entityName}FullInfoDto.cs");
+            RegionFileWriter.WriteFile(fullPath, renderedFull);
+
+            // Generate SQL query for FullInfo
+            var sqlPath = Path.Combine(outputDir, "Infrastructure", "Sql", $"{entityName}FullInfo.sql");
+            Directory.CreateDirectory(Path.GetDirectoryName(sqlPath)!);
+            var sql = BuildFullInfoSql(table);
+            File.WriteAllText(sqlPath, sql);
+
+            // Generate sync endpoint stub
+            var syncTemplatePath = Path.Combine(templatesRoot, "webapi", "syncEndpoint.scriban");
+            if (File.Exists(syncTemplatePath))
+            {
+                var syncTemplate = await File.ReadAllTextAsync(syncTemplatePath, ct);
+                var syncModel = new
+                {
+                    domainNamespace = domainNamespace,
+                    namespace = "WebApi.Endpoints",
+                    entityName = entityName,
+                    entityLower = NameHelper.Singularize(table.Name).ToLowerInvariant()
+                };
+                var syncRendered = _renderer.Render(syncTemplate, syncModel);
+                var syncPath = Path.Combine(outputDir, "WebApi", "Endpoints", $"{entityName}SyncEndpoint.cs");
+                RegionFileWriter.WriteFile(syncPath, syncRendered);
+            }
         }
 
         // Generate DbContext
@@ -111,5 +187,30 @@ public sealed class CodeGenerator
             "bytea" => "byte[]",
             _ => "string"
         };
+    }
+
+    private static string BuildFullInfoSql(TableModel table)
+    {
+        var sb = new StringBuilder();
+        sb.Append("SELECT e.*");
+        for (int i = 0; i < table.ForeignKeys.Count; i++)
+        {
+            sb.Append($", r{i}.*");
+        }
+        sb.AppendLine();
+        sb.AppendLine($"FROM {table.Schema}.{table.Name} e");
+        for (int i = 0; i < table.ForeignKeys.Count; i++)
+        {
+            var fk = table.ForeignKeys[i];
+            sb.Append($"LEFT JOIN {fk.ReferencedSchema}.{fk.ReferencedTable} r{i} ON ");
+            for (int colIndex = 0; colIndex < fk.Columns.Count; colIndex++)
+            {
+                if (colIndex > 0) sb.Append(" AND ");
+                sb.Append($"e.{fk.Columns[colIndex]} = r{i}.{fk.ReferencedColumns[colIndex]}");
+            }
+            sb.AppendLine();
+        }
+        sb.AppendLine("WHERE 1=1 ;");
+        return sb.ToString();
     }
 }

@@ -1,0 +1,21 @@
+using Microsoft.AspNetCore.Mvc;
+using {{domainNamespace}};
+using Application.DTOs;
+
+namespace {{namespace}}
+{
+    public static partial class {{entityName}}SyncEndpoint
+    {
+        public static RouteGroupBuilder Map{{entityName}}Sync(this RouteGroupBuilder group)
+        {
+#region generated
+            group.MapPost("/{{entityLower}}/sync", async (object repo, [FromBody] object payload) =>
+            {
+                // TODO: Implement bulk sync logic
+                return Results.Ok();
+            });
+#endregion
+            return group;
+        }
+    }
+}

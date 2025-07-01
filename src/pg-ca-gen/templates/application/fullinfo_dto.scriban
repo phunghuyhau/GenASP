@@ -1,0 +1,10 @@
+namespace {{namespace}}
+{
+    public partial class {{name}}FullInfoDto
+    {
+#region generated
+{{ for prop in properties }}        public {{prop.Type}} {{prop.Name}} { get; set; }
+{{ end }}{{ for nav in navs }}        public {{nav.Type}}Dto? {{nav.Name}} { get; set; }
+{{ end }}#endregion
+    }
+}
