@@ -161,6 +161,38 @@ public sealed class CodeGenerator
             RegionFileWriter.WriteFile(rawPath, rawRendered);
         }
 
+        // Generate CachedRepository
+        var cacheRepoTemplatePath = Path.Combine(templatesRoot, "infrastructure", "cached_repository.scriban");
+        if (File.Exists(cacheRepoTemplatePath))
+        {
+            var cacheTemplate = await File.ReadAllTextAsync(cacheRepoTemplatePath, ct);
+            var cacheModel = new { namespace = "Infrastructure.Repositories" };
+            var cacheRendered = _renderer.Render(cacheTemplate, cacheModel);
+            var cachePath = Path.Combine(outputDir, "Infrastructure", "Repositories", "CachedRepository.cs");
+            RegionFileWriter.WriteFile(cachePath, cacheRendered);
+        }
+
+        // Generate CacheableAttribute
+        var cacheAttrTemplatePath = Path.Combine(templatesRoot, "shared", "cacheable_attribute.scriban");
+        if (File.Exists(cacheAttrTemplatePath))
+        {
+            var attrTemplate = await File.ReadAllTextAsync(cacheAttrTemplatePath, ct);
+            var attrRendered = _renderer.Render(attrTemplate, new { namespace = "Domain.Common" });
+            var attrPath = Path.Combine(outputDir, "Domain", "Common", "CacheableAttribute.cs");
+            RegionFileWriter.WriteFile(attrPath, attrRendered);
+        }
+
+        // Generate Infrastructure DI extension
+        var diTemplatePath = Path.Combine(templatesRoot, "infrastructure", "di_extension.scriban");
+        if (File.Exists(diTemplatePath))
+        {
+            var diTemplate = await File.ReadAllTextAsync(diTemplatePath, ct);
+            var diModel = new { namespace = "Infrastructure" };
+            var diRendered = _renderer.Render(diTemplate, diModel);
+            var diPath = Path.Combine(outputDir, "Infrastructure", "DependencyInjection.cs");
+            RegionFileWriter.WriteFile(diPath, diRendered);
+        }
+
         // Generate ErrorHandlingMiddleware
         var ehTemplatePath = Path.Combine(templatesRoot, "webapi", "error_handling_middleware.scriban");
         if (File.Exists(ehTemplatePath))

@@ -1,0 +1,7 @@
+namespace {{namespace}}
+{
+    [System.AttributeUsage(System.AttributeTargets.Class)]
+    public sealed class CacheableAttribute : System.Attribute
+    {
+    }
+}
