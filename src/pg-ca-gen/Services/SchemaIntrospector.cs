@@ -55,7 +55,8 @@ public sealed class SchemaIntrospector
                     IsNullable = isNullable,
                     DataType = dataType,
                     MaxLength = charMax,
-                    IsIdentity = isIdentity
+                    IsIdentity = isIdentity,
+                    IsVersion = string.Equals(columnName, "version", StringComparison.OrdinalIgnoreCase)
                 });
             }
         }
@@ -136,7 +137,7 @@ public sealed class SchemaIntrospector
     private sealed class TableBuilder
     {
         private readonly List<ColumnModel> _columns = new();
-        private readonly HashSet<string> _pk = new();
+        private readonly List<string> _pk = new();
         private readonly Dictionary<string, ForeignKeyAccumulator> _foreignKeys = new(StringComparer.OrdinalIgnoreCase);
 
         public string Schema { get; }
@@ -149,7 +150,11 @@ public sealed class SchemaIntrospector
         }
 
         public void AddColumn(ColumnModel col) => _columns.Add(col);
-        public void AddPrimaryKeyColumn(string colName) => _pk.Add(colName);
+        public void AddPrimaryKeyColumn(string colName)
+        {
+            if (!_pk.Contains(colName))
+                _pk.Add(colName);
+        }
 
         public void AddForeignKey(string fkName, string colName, string refSchema, string refTable, string refCol)
         {

@@ -18,8 +18,10 @@ namespace {{namespace}}
 {{ for table in tables }}            modelBuilder.Entity<{{table.EntityName}}>(entity =>
             {
                 entity.ToTable("{{table.Name}}", "{{table.Schema}}");
-{{ if table.PrimaryKey.size > 0 }}                entity.HasKey(e => new { {{ for pk in table.PrimaryKey; separator=", " }}e.{{pk.PropertyName}}{{ end }} });
-{{ end }}            });
+{{ if table.PrimaryKey.size == 1 }}                entity.HasKey(e => e.{{table.PrimaryKey[0].PropertyName}});
+{{ elsif table.PrimaryKey.size > 1 }}                entity.HasKey(e => new { {{ for pk in table.PrimaryKey; separator=", " }}e.{{pk.PropertyName}}{{ end }} });
+{{ end }}                entity.Property(e => e.Version).IsConcurrencyToken();
+            });
 
 {{ end }}        }
 #endregion

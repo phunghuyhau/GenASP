@@ -7,4 +7,5 @@ public sealed class ColumnModel
     public bool IsNullable { get; init; }
     public int? MaxLength { get; init; }
     public bool IsIdentity { get; init; }
+    public bool IsVersion { get; init; }
 }

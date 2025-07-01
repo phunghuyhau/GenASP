@@ -15,6 +15,10 @@ public sealed class CodeGenerator
     {
         var dbModel = await _introspector.IntrospectAsync(config, ct);
 
+        var domainNamespace = "Domain.Entities"; // could be configurable later
+        var infraNamespace = "Infrastructure.Persistence";
+        var dbContextName = "AppDbContext"; // later config
+
         var templatesRoot = Path.Combine(AppContext.BaseDirectory, "templates");
         if (!Directory.Exists(templatesRoot))
         {
@@ -24,9 +28,16 @@ public sealed class CodeGenerator
         if (!Directory.Exists(templatesRoot))
             throw new InvalidOperationException($"Templates directory not found. Looked in {templatesRoot}");
 
-        var domainNamespace = "Domain.Entities"; // could be configurable later
-        var infraNamespace = "Infrastructure.Persistence";
-        var dbContextName = "AppDbContext"; // later config
+        // Generate BaseEntity once
+        var baseEntityTemplatePath = Path.Combine(templatesRoot, "domain", "baseentity.scriban");
+        if (File.Exists(baseEntityTemplatePath))
+        {
+            var baseTemplate = await File.ReadAllTextAsync(baseEntityTemplatePath, ct);
+            var baseModel = new { namespace = domainNamespace };
+            var baseRendered = _renderer.Render(baseTemplate, baseModel);
+            var basePath = Path.Combine(outputDir, "Domain", "Entities", "BaseEntity.cs");
+            RegionFileWriter.WriteFile(basePath, baseRendered);
+        }
 
         // Generate entities:
         var entityTemplatePath = Path.Combine(templatesRoot, "domain", "entity.scriban");
@@ -41,7 +52,7 @@ public sealed class CodeGenerator
             {
                 namespace = domainNamespace,
                 name = entityName,
-                properties = table.Columns.Select(c => new
+                properties = table.Columns.Where(c => !c.IsVersion).Select(c => new
                 {
                     Name = NameHelper.ToPascalCase(c.Name),
                     Type = MapColumnType(c)
@@ -97,6 +108,7 @@ public sealed class CodeGenerator
             "timestamp without time zone" or "timestamp with time zone" => "DateTime",
             "date" => "DateTime",
             "numeric" or "decimal" => "decimal",
+            "bytea" => "byte[]",
             _ => "string"
         };
     }

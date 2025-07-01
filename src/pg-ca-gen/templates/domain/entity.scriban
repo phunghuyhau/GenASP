@@ -1,7 +1,7 @@
 // Generated entity class for {{name}}
 namespace {{namespace}}
 {
-    public partial class {{name}}
+    public partial class {{name}} : BaseEntity
     {
 #region generated
 {{ for prop in properties }}        public {{prop.Type}} {{prop.Name}} { get; set; }

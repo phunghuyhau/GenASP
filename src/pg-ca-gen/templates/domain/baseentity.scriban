@@ -1,0 +1,12 @@
+namespace {{namespace}}
+{
+    public abstract partial class BaseEntity
+    {
+#region generated
+        public byte[] Version { get; set; } = System.Array.Empty<byte[]>();
+#endregion
+
+#region custom-code
+#endregion
+    }
+}
