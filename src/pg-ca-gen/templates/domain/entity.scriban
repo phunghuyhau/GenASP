@@ -1,7 +1,9 @@
 // Generated entity class for {{name}}
+using Domain.Common;
 namespace {{namespace}}
 {
-    public partial class {{name}} : BaseEntity
+    {{ if cacheable }}    [Cacheable]
+    {{ end }}    public partial class {{name}} : BaseEntity
     {
 #region generated
 {{ for prop in properties }}        public {{prop.Type}} {{prop.Name}} { get; set; }

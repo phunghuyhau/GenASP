@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace {{namespace}}
 {
     public sealed class SyncPayload<TDto>

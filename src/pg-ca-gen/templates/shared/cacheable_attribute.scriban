@@ -1,3 +1,5 @@
+using System;
+
 namespace {{namespace}}
 {
     [System.AttributeUsage(System.AttributeTargets.Class)]

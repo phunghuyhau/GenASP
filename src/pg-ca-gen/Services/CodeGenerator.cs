@@ -64,7 +64,8 @@ public sealed class CodeGenerator
                     Name = NameHelper.ToPascalCase(c.Name),
                     Type = MapColumnType(c)
                 }).ToList(),
-                navs = navs
+                navs = navs,
+                cacheable = config.Cache != null && config.Cache.Any(c => string.Equals(c, table.Name, StringComparison.OrdinalIgnoreCase))
             };
 
             var rendered = _renderer.Render(entityTemplate, model);
