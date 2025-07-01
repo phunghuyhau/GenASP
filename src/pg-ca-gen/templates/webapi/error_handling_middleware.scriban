@@ -1,0 +1,48 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+
+namespace {{namespace}}
+{
+    public sealed class ErrorHandlingMiddleware
+    {
+        private readonly RequestDelegate _next;
+        private readonly ILogger<ErrorHandlingMiddleware> _logger;
+
+        public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+        {
+            _next = next;
+            _logger = logger;
+        }
+
+        public async Task Invoke(HttpContext context)
+        {
+            try
+            {
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled exception");
+                await WriteProblemDetailsAsync(context, ex);
+            }
+        }
+
+        private static async Task WriteProblemDetailsAsync(HttpContext context, Exception ex)
+        {
+            var pd = new ProblemDetails
+            {
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
+                Title = "An unexpected error occurred",
+                Status = StatusCodes.Status500InternalServerError,
+                Detail = ex.Message,
+                Instance = context.TraceIdentifier
+            };
+            context.Response.StatusCode = pd.Status ?? 500;
+            context.Response.ContentType = "application/problem+json";
+            var json = JsonSerializer.Serialize(pd);
+            await context.Response.WriteAsync(json);
+        }
+    }
+}

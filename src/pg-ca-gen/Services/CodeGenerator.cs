@@ -139,6 +139,50 @@ public sealed class CodeGenerator
             }
         }
 
+        // Generate shared DynamicQueryBuilder
+        var queryBuilderTemplatePath = Path.Combine(templatesRoot, "shared", "dynamic_query_builder.scriban");
+        if (File.Exists(queryBuilderTemplatePath))
+        {
+            var qbTemplate = await File.ReadAllTextAsync(queryBuilderTemplatePath, ct);
+            var qbModel = new { namespace = "Application.Common" };
+            var qbRendered = _renderer.Render(qbTemplate, qbModel);
+            var qbPath = Path.Combine(outputDir, "Application", "Common", "QueryableExtensions.cs");
+            RegionFileWriter.WriteFile(qbPath, qbRendered);
+        }
+
+        // Generate RawSqlRepository
+        var rawRepoTemplatePath = Path.Combine(templatesRoot, "infrastructure", "rawsql_repository.scriban");
+        if (File.Exists(rawRepoTemplatePath))
+        {
+            var rawTemplate = await File.ReadAllTextAsync(rawRepoTemplatePath, ct);
+            var rawModel = new { namespace = "Infrastructure.Repositories" };
+            var rawRendered = _renderer.Render(rawTemplate, rawModel);
+            var rawPath = Path.Combine(outputDir, "Infrastructure", "Repositories", "RawSqlRepository.cs");
+            RegionFileWriter.WriteFile(rawPath, rawRendered);
+        }
+
+        // Generate ErrorHandlingMiddleware
+        var ehTemplatePath = Path.Combine(templatesRoot, "webapi", "error_handling_middleware.scriban");
+        if (File.Exists(ehTemplatePath))
+        {
+            var ehTemplate = await File.ReadAllTextAsync(ehTemplatePath, ct);
+            var ehModel = new { namespace = "WebApi.Middlewares" };
+            var ehRendered = _renderer.Render(ehTemplate, ehModel);
+            var ehPath = Path.Combine(outputDir, "WebApi", "Middlewares", "ErrorHandlingMiddleware.cs");
+            RegionFileWriter.WriteFile(ehPath, ehRendered);
+        }
+
+        // Generate Program.cs with Serilog wiring if not exists
+        var progTemplatePath = Path.Combine(templatesRoot, "webapi", "program.scriban");
+        if (File.Exists(progTemplatePath))
+        {
+            var progTemplate = await File.ReadAllTextAsync(progTemplatePath, ct);
+            var progRendered = _renderer.Render(progTemplate, new { });
+            var progPath = Path.Combine(outputDir, "WebApi", "Program.cs");
+            if (!File.Exists(progPath))
+                File.WriteAllText(progPath, progRendered);
+        }
+
         // Generate DbContext
         var dbContextTemplatePath = Path.Combine(templatesRoot, "infrastructure", "dbcontext.scriban");
         var dbContextTemplate = await File.ReadAllTextAsync(dbContextTemplatePath, ct);

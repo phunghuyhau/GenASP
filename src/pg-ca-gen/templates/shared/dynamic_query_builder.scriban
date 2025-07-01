@@ -1,0 +1,24 @@
+using System.Linq;
+using System.Linq.Expressions;
+
+namespace {{namespace}}
+{
+    public static class QueryableExtensions
+    {
+#region generated
+        public static IQueryable<T> WhereIf<T>(this IQueryable<T> source, bool condition, Expression<Func<T, bool>> predicate)
+            => condition ? source.Where(predicate) : source;
+
+        public static IQueryable<T> OrderByDynamic<T>(this IQueryable<T> source, string propertyName, bool descending = false)
+        {
+            var param = Expression.Parameter(typeof(T), "x");
+            var body = Expression.PropertyOrField(param, propertyName);
+            var lambda = Expression.Lambda(body, param);
+            var method = descending ? "OrderByDescending" : "OrderBy";
+            var genericMethod = typeof(Queryable).GetMethods().First(m => m.Name == method && m.GetParameters().Length == 2)
+                .MakeGenericMethod(typeof(T), body.Type);
+            return (IQueryable<T>)genericMethod.Invoke(null, new object[] { source, lambda })!;
+        }
+#endregion
+    }
+}

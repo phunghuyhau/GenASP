@@ -1,0 +1,49 @@
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Dapper;
+using Microsoft.Extensions.Configuration;
+using Npgsql;
+
+namespace {{namespace}}
+{
+    public interface IRawSqlRepository
+    {
+        Task<IEnumerable<T>> QueryAsync<T>(string sql, object? parameters = null, CancellationToken ct = default);
+    }
+
+    public sealed class RawSqlRepository : IRawSqlRepository, IDisposable
+    {
+        private readonly string _connectionString;
+        private NpgsqlConnection? _connection;
+
+        public RawSqlRepository(IConfiguration config)
+        {
+            _connectionString = config.GetConnectionString("Default") ?? throw new InvalidOperationException("Connection string 'Default' not found");
+        }
+
+        private async Task<NpgsqlConnection> GetOpenConnectionAsync(CancellationToken ct)
+        {
+            if (_connection == null)
+            {
+                _connection = new NpgsqlConnection(_connectionString);
+            }
+            if (_connection.State != System.Data.ConnectionState.Open)
+            {
+                await _connection.OpenAsync(ct);
+            }
+            return _connection;
+        }
+
+        public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object? parameters = null, CancellationToken ct = default)
+        {
+            var conn = await GetOpenConnectionAsync(ct);
+            return await conn.QueryAsync<T>(new CommandDefinition(sql, parameters, cancellationToken: ct));
+        }
+
+        public void Dispose()
+        {
+            _connection?.Dispose();
+        }
+    }
+}

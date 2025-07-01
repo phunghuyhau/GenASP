@@ -1,0 +1,26 @@
+using Serilog;
+using Serilog.Events;
+using WebApi.Middlewares;
+using Infrastructure.Persistence;
+
+var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+builder.Services.AddInfrastructure(builder.Configuration);
+// TODO: Add Application services registration
+
+var app = builder.Build();
+
+app.UseMiddleware<ErrorHandlingMiddleware>();
+app.UseSerilogRequestLogging();
+
+app.MapGet("/health", () => Results.Ok("Healthy"));
+
+app.Run();
