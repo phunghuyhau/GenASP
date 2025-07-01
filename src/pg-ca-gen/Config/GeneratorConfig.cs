@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 namespace PgCaGen.Config;
 
 public sealed class GeneratorConfig

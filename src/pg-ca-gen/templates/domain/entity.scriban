@@ -1,0 +1,14 @@
+// Generated entity class for {{name}}
+namespace {{namespace}}
+{
+    public partial class {{name}}
+    {
+#region generated
+{{ for prop in properties }}        public {{prop.Type}} {{prop.Name}} { get; set; }
+{{ end }}#endregion
+
+#region custom-code
+// Add custom members here
+#endregion
+    }
+}

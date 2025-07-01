@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 using PgCaGen.Config;
 using PgCaGen.Services;
+using System.Linq;
 
 var rootCmd = new RootCommand("PostgreSQL Clean Architecture Generator (Phase 1 – schema introspection)");
 
@@ -55,7 +56,35 @@ introspectCmd.SetHandler(async (bool pretty) =>
     }
 }, prettyOpt);
 
+var generateCmd = new Command("generate", "Generate code for Domain and Infrastructure layers")
+{
+    new Option<string>("--output", () => "out", "Output directory for generated code")
+};
+generateCmd.SetHandler(async (string outputDir) =>
+{
+    var cfgPath = Path.Combine(Directory.GetCurrentDirectory(), "pgca.json");
+    if (!File.Exists(cfgPath))
+    {
+        Console.Error.WriteLine("pgca.json not found. Run 'pg-ca-gen init' first.");
+        return;
+    }
+
+    var cfgJson = await File.ReadAllTextAsync(cfgPath);
+    var cfg = JsonSerializer.Deserialize<GeneratorConfig>(cfgJson)!;
+    var generator = new CodeGenerator();
+    try
+    {
+        await generator.GenerateAsync(cfg, Path.GetFullPath(outputDir));
+        Console.WriteLine($"Code generated under {Path.GetFullPath(outputDir)}");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+    }
+}, generateCmd.Children.OfType<Option<string>>().First());
+
 rootCmd.AddCommand(initCmd);
 rootCmd.AddCommand(introspectCmd);
+rootCmd.AddCommand(generateCmd);
 
 return await rootCmd.InvokeAsync(args);

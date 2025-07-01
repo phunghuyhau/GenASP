@@ -1,0 +1,31 @@
+// Generated DbContext
+using Microsoft.EntityFrameworkCore;
+using {{domainNamespace}};
+
+namespace {{namespace}}
+{
+    public partial class {{dbContextName}} : DbContext
+    {
+        public {{dbContextName}}(DbContextOptions<{{dbContextName}}> options) : base(options) { }
+
+#region generated
+{{ for table in tables }}        public DbSet<{{table.EntityName}}> {{table.EntityNamePlural}} { get; set; }
+{{ end }}
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+{{ for table in tables }}            modelBuilder.Entity<{{table.EntityName}}>(entity =>
+            {
+                entity.ToTable("{{table.Name}}", "{{table.Schema}}");
+{{ if table.PrimaryKey.size > 0 }}                entity.HasKey(e => new { {{ for pk in table.PrimaryKey; separator=", " }}e.{{pk.PropertyName}}{{ end }} });
+{{ end }}            });
+
+{{ end }}        }
+#endregion
+
+#region custom-code
+// Custom mappings here
+#endregion
+    }
+}

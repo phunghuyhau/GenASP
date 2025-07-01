@@ -1,7 +1,6 @@
 using Npgsql;
 using PgCaGen.Config;
 using PgCaGen.Models;
-using System.Text.Json;
 
 namespace PgCaGen.Services;
 

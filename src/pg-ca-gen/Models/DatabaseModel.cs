@@ -1,4 +1,5 @@
 namespace PgCaGen.Models;
+using System.Collections.Generic;
 
 public sealed class DatabaseModel
 {

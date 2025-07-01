@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace PgCaGen.Models;
 
 public sealed class ForeignKeyModel
